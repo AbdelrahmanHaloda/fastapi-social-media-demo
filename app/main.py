@@ -1,22 +1,9 @@
 from fastapi import FastAPI
 
-from app.models.post import UserPost, UserPostIn
+from app.routers.post import router as post_router
 
 app = FastAPI()
 
 
-# database
-post_table = {}
+app.include_router(post_router)
 
-@app.post("/post", response_model = UserPost)
-async def create_post(post: UserPostIn):
-    data = post.dict()
-    lastPostId = len(post_table)
-    new_post = {**data, "id": lastPostId + 1}
-    post_table[lastPostId] = new_post
-    return new_post
-
-
-@app.get("/posts", response_model = list[UserPost])
-async def get_posts():
-    return list(post_table.values())
