@@ -1,13 +1,9 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+
+from app.models.post import UserPost, UserPostIn
 
 app = FastAPI()
 
-class UserPostIn(BaseModel):
-    Body: str
-
-class UserPost(UserPostIn):
-    id: int
 
 # database
 post_table = {}
