@@ -23,11 +23,11 @@ def client() -> Generator:
 
 @pytest.fixture(autouse=True)
 async def db() -> AsyncGenerator:
-    database.connect()
+    await database.connect()
     try:
         yield
     finally:
-        database.disconnect()
+        await database.disconnect()
 
 
 @pytest.fixture()

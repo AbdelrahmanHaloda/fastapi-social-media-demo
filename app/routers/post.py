@@ -31,7 +31,7 @@ async def create_post(post: UserPostIn):
     """Create and return a new post."""
 
     # Convert the validated request model into values accepted by SQLAlchemy.
-    data = post.dict()
+    data = post.model_dump()
 
     # Build and execute the INSERT statement.
     query = post_table.insert().values(data)
@@ -69,7 +69,7 @@ async def create_comment(comment: CommentIn):
         )
 
     # Convert the validated request model into database column values.
-    data = comment.dict()
+    data = comment.model_dump()
 
     # Build and execute the comment INSERT statement.
     query = comment_table.insert().values(data)
