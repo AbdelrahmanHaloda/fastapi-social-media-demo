@@ -9,8 +9,10 @@ from app.routers.post import router as post_router
 @asynccontextmanager 
 async def lifespan(app: FastAPI):
     await database.connect()
-    yield
-    await database.disconnect()
+    try:
+        yield
+    finally:
+        await database.disconnect()
 
 app = FastAPI(lifespan=lifespan)
 
