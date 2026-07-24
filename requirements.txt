@@ -18,3 +18,4 @@ uvicorn==0.51.0
 sqlalchemy
 databases[aiosqlite]
 python-dotenv
+rich
