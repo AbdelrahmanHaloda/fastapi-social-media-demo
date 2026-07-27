@@ -31,13 +31,31 @@ def configure_logging() -> None:
                     "show_path": False,
                 }
             },
-            "loggers": {
-                # Applies to app and all child loggers, such as app.main.
+           "loggers": {
+                # Use the shared console handler for Uvicorn server and access logs.
+                "uvicorn": {
+                    "handlers": ["default"],
+                    "level": "INFO",
+                    "propagate": False,
+                },
+                # Enable environment-specific logging for app and its child modules.
                 "app": {
                     "handlers": ["default"],
                     "level": log_level,
                     "propagate": False,
-                }
+                },
+                # Report only warnings and errors from the database abstraction layer.
+                "databases": {
+                    "handlers": ["default"],
+                    "level": "WARNING",
+                    "propagate": False,
+                },
+                # Suppress verbose SQLite driver messages during normal operation.
+                "aiosqlite": {
+                    "handlers": ["default"],
+                    "level": "WARNING",
+                    "propagate": False,
+                },
             },
         }
     )
