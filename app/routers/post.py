@@ -95,11 +95,6 @@ async def create_comment(comment: CommentIn):
     post = await find_post(comment.post_id)
 
     if post is None:
-        logger.warning(
-            "Comment creation rejected: post_id=%s does not exist",
-            comment.post_id,
-        )
-
         raise HTTPException(
             status_code=404,
             detail="Post not found",
@@ -163,11 +158,6 @@ async def get_post_with_comments(post_id: int):
     post = await find_post(post_id)
 
     if post is None:
-        logger.warning(
-            "Post retrieval failed: post_id=%s does not exist",
-            post_id,
-        )
-
         raise HTTPException(
             status_code=404,
             detail="Post not found",
