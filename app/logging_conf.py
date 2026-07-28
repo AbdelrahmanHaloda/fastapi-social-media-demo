@@ -20,7 +20,12 @@ def configure_logging() -> None:
                     "class": "logging.Formatter",
                     "datefmt": "%Y-%m-%dT%H:%M:%S",
                     "format": "%(name)s:%(lineno)d - %(message)s",
-                }
+                },
+                "file": {
+                    "class": "logging.Formatter",
+                    "datefmt": "%Y-%m-%dT%H:%M:%S",
+                    "format": "%(asctime)s.%(msecs)03dZ | %(levelname)-8s | %(name)s:%(lineno)d - %(message)s",
+                },
             },
             "handlers": {
                 "default": {
@@ -29,18 +34,27 @@ def configure_logging() -> None:
                     "formatter": "console",
                     # Source information is already included by the formatter.
                     "show_path": False,
-                }
+                },
+                "rotating_file": {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "level": "DEBUG",
+                    "formatter": "file",
+                    "filename": "app.log",
+                    "maxBytes": 1024 * 1024 * 1,  # in bytes (1 mega bytes)
+                    "backupCount": 2,
+                    "encoding": "utf8",
+                },
             },
-           "loggers": {
+            "loggers": {
                 # Use the shared console handler for Uvicorn server and access logs.
                 "uvicorn": {
-                    "handlers": ["default"],
+                    "handlers": ["default", "rotating_file"],
                     "level": "INFO",
                     "propagate": False,
                 },
                 # Enable environment-specific logging for app and its child modules.
                 "app": {
-                    "handlers": ["default"],
+                    "handlers": ["default", "rotating_file"],
                     "level": log_level,
                     "propagate": False,
                 },
