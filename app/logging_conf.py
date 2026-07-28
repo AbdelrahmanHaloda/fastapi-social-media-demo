@@ -33,7 +33,7 @@ def configure_logging() -> None:
                     "level": "DEBUG",
                     "formatter": "console",
                     # Source information is already included by the formatter.
-                    "show_path": False,
+                    "show_path": True,
                 },
                 "rotating_file": {
                     "class": "logging.handlers.RotatingFileHandler",
