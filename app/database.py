@@ -8,7 +8,30 @@ from app.config import config
 # Registry containing all SQLAlchemy table definitions.
 metadata = sqlalchemy.MetaData()
 
+""" DataBase Users Schema """
+user_table = sqlalchemy.Table(
+    "userss",
+    metadata,
+    # id column - auto incremented
+    sqlalchemy.Column(
+        "id",
+        sqlalchemy.Integer,
+        primary_key=True,
+    ),
+    # email column, must be unique.
+    sqlalchemy.Column(
+        "email",
+        sqlalchemy.String,
+        unique=True
+    ),
+    # password column.
+    sqlalchemy.Column(
+        "password",
+        sqlalchemy.String
+    ),
+)
 
+""" DataBase Posts Schema """
 post_table = sqlalchemy.Table(
     "posts",
     metadata,
@@ -26,8 +49,7 @@ post_table = sqlalchemy.Table(
     ),
 )
 
-""" DataBase Tables Schema """
-
+""" DataBase Comments Schema """
 comment_table = sqlalchemy.Table(
     "comments",
     metadata,
