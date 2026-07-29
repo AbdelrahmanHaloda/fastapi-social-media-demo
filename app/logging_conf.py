@@ -63,6 +63,10 @@ class EmailObfuscationFilter(logging.Filter):
         return True
 
 
+handlers = ["default", "rotating_file"]
+if isinstance(config, DevConfig):
+    handlers = ["default", "rotating_file", "logtail"]
+
 def configure_logging() -> None:
     """Configure environment-specific application logging."""
     is_development = isinstance(config, DevConfig)
@@ -138,6 +142,18 @@ def configure_logging() -> None:
                     "backupCount": 2,
                     "encoding": "utf-8",
                 },
+                # Cloud Logging - Optional
+                "logtail": {
+                    "class": "logtail.LogtailHandler",
+                    "level": "DEBUG",
+                    "formatter": "console",
+                    "filters": [
+                        "correlation_id",
+                        "email_obfuscation",
+                    ],
+                    "source_token": config.LOGTAIL_API_KEY,
+                    "host": config.LOGTAIL_INGESTING_HOST,
+                },
             },
             "loggers": {
                 # Capture Uvicorn server and access logs.
@@ -148,7 +164,7 @@ def configure_logging() -> None:
                 },
                 # Capture application logs using an environment-specific level.
                 "app": {
-                    "handlers": ["default", "rotating_file"],
+                    "handlers": handlers,
                     "level": app_log_level,
                     "propagate": False,
                 },
