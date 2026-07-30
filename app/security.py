@@ -4,7 +4,7 @@ import datetime
 import logging
 
 from fastapi import HTTPException, status
-from jose import jwt
+from jose import ExpiredSignatureError, JWTError, jwt
 from passlib.context import CryptContext
 
 from app.database import database, user_table
@@ -114,6 +114,39 @@ async def authenticate_user(email: str, password: str):
 
     # Reject authentication when the password is incorrect.
     if not verify_password(password, user.password):
+        raise credentials_exception
+
+    return user
+
+async def get_current_user(token: str):
+    """Validate a JWT and return the user identified by its subject claim."""
+
+    try:
+        # Validate the token's signature and expiration.
+        payload = jwt.decode(
+            token,
+            key=SECRET_TOKEN_KEY,
+            algorithms=[ALGORITHM],
+        )
+
+        # The subject claim contains the authenticated user's email.
+        email = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+
+    except ExpiredSignatureError as error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from error
+
+    except JWTError as error:
+        raise credentials_exception from error
+
+    # Ensure the user represented by the token still exists.
+    user = await get_user(email=email)
+    if user is None:
         raise credentials_exception
 
     return user

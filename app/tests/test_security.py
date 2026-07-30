@@ -13,7 +13,6 @@ async def test_access_token_expire_minutes():
 @pytest.mark.anyio
 async def test_create_access_token():
     token = security.create_access_token("123")
-
     payload = jwt.decode(
         token,
         key=security.SECRET_TOKEN_KEY,
@@ -53,7 +52,6 @@ async def test_get_user(registered_user: dict):
 @pytest.mark.anyio
 async def test_get_user_not_found():
     user = await security.get_user("missing@example.com")
-
     assert user is None
 
 
@@ -63,7 +61,6 @@ async def test_authenticate_user(registered_user: dict):
         registered_user["email"],
         registered_user["password"],
     )
-
     assert user.email == registered_user["email"]
 
 
@@ -74,7 +71,6 @@ async def test_authenticate_user_not_found():
             "missing@test.com",
             "1234",
         )
-
     assert exception.value.status_code == status.HTTP_401_UNAUTHORIZED
     assert exception.value.detail == "Could not validate credentials"
 
@@ -88,6 +84,16 @@ async def test_authenticate_user_wrong_password(
             registered_user["email"],
             "wrong-password",
         )
-
     assert exception.value.status_code == status.HTTP_401_UNAUTHORIZED
     assert exception.value.detail == "Could not validate credentials"
+
+@pytest.mark.anyio
+async def test_get_current_user(registered_user: dict):
+    token = security.create_access_token(registered_user["email"])
+    user = await security.get_current_user(token)
+    assert user.email == registered_user["email"]
+
+@pytest.mark.anyio
+async def test_get_current_invalid_user():
+    with pytest.raises(security.HTTPException):
+        await security.get_current_user("invalid token")
