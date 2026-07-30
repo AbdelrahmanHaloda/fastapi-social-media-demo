@@ -1,8 +1,9 @@
 """API routes for creating and retrieving posts and comments."""
 
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.database import comment_table, database, post_table
 from app.models.post import (
@@ -12,20 +13,14 @@ from app.models.post import (
     UserPostIn,
     UserPostWithComments,
 )
-from app.security import get_current_user, oauth2_scheme
+from app.models.user import User
+from app.security import get_current_user
 
 logger = logging.getLogger(__name__)
 
 # Groups the post and comment endpoints so they can be registered
 # together in the main FastAPI application.
 router = APIRouter()
-
-
-async def authenticate_request(request: Request) -> None:
-    """Validate the Bearer token included in an incoming request."""
-
-    token = await oauth2_scheme(request)
-    await get_current_user(token)
 
 
 async def find_post(post_id: int):
@@ -55,12 +50,10 @@ async def find_post(post_id: int):
 )
 async def create_post(
     post: UserPostIn,
-    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Create a post for an authenticated user."""
 
-    # Reject the request if it has no valid Bearer token.
-    await authenticate_request(request)
 
     # Convert the validated request model into values accepted by SQLAlchemy.
     data = post.model_dump()
@@ -101,12 +94,9 @@ async def get_posts():
 )
 async def create_comment(
     comment: CommentIn,
-    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Create a comment on an existing post for an authenticated user."""
-
-    # Reject the request if it has no valid Bearer token.
-    await authenticate_request(request)
 
     post = await find_post(comment.post_id)
 
