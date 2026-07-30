@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.database import comment_table, database, post_table
 from app.models.post import (
@@ -12,6 +12,7 @@ from app.models.post import (
     UserPostIn,
     UserPostWithComments,
 )
+from app.security import get_current_user, oauth2_scheme
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +21,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+async def authenticate_request(request: Request) -> None:
+    """Validate the Bearer token included in an incoming request."""
+
+    token = await oauth2_scheme(request)
+    await get_current_user(token)
+
+
 async def find_post(post_id: int):
-    """Retrieve a single post by its database ID."""
+    """Return a post by ID, or None when it does not exist."""
 
     logger.debug("Looking up post: post_id=%s", post_id)
 
-    # Build a SELECT query restricted to the requested post ID.
     query = post_table.select().where(post_table.c.id == post_id)
-    logger.debug("Executing post lookup query: %s", query)
+
 
     # Return the matching database record, or None if no row exists.
     post = await database.fetch_one(query)
@@ -41,40 +48,45 @@ async def find_post(post_id: int):
     return post
 
 
-@router.post("/post", response_model=UserPost, status_code=201)
-async def create_post(post: UserPostIn):
-    """Create and return a new post."""
+@router.post(
+    "/post",
+    response_model=UserPost,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_post(
+    post: UserPostIn,
+    request: Request,
+):
+    """Create a post for an authenticated user."""
 
-    logger.debug("Preparing to create post")
+    # Reject the request if it has no valid Bearer token.
+    await authenticate_request(request)
 
     # Convert the validated request model into values accepted by SQLAlchemy.
     data = post.model_dump()
 
-    # Build and execute the INSERT statement.
     query = post_table.insert().values(data)
-    logger.debug("Executing post insert query: %s", query)
-
     # For the current SQLite database, execute returns the generated
     # primary-key value of the inserted row.
     last_record_id = await database.execute(query)
 
     logger.info("Post created: post_id=%s", last_record_id)
 
-    # Combine the submitted fields with the database-generated ID.
-    return {**data, "id": last_record_id}
+    return {
+        **data,
+        "id": last_record_id,
+    }
 
 
-@router.get("/posts", response_model=list[UserPost])
+@router.get(
+    "/posts",
+    response_model=list[UserPost],
+)
 async def get_posts():
-    """Return all posts stored in the database."""
-
+    """Return all posts."""
     logger.debug("Fetching all posts")
 
-    # Build a SELECT query covering every row in the posts table.
     query = post_table.select()
-    logger.debug("Executing posts query: %s", query)
-
-    # fetch_all returns a list of database records.
     posts = await database.fetch_all(query)
 
     logger.debug("Posts retrieved: count=%s", len(posts))
@@ -82,31 +94,31 @@ async def get_posts():
     return posts
 
 
-@router.post("/comment", response_model=Comment, status_code=201)
-async def create_comment(comment: CommentIn):
-    """Create a comment for an existing post."""
+@router.post(
+    "/comment",
+    response_model=Comment,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_comment(
+    comment: CommentIn,
+    request: Request,
+):
+    """Create a comment on an existing post for an authenticated user."""
 
-    logger.debug(
-        "Preparing to create comment: post_id=%s",
-        comment.post_id,
-    )
+    # Reject the request if it has no valid Bearer token.
+    await authenticate_request(request)
 
-    # Verify that the referenced post exists before inserting the comment.
     post = await find_post(comment.post_id)
 
     if post is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found",
         )
 
-    # Convert the validated request model into database column values.
     data = comment.model_dump()
 
-    # Build and execute the comment INSERT statement.
     query = comment_table.insert().values(data)
-    logger.debug("Executing comment insert query: %s", query)
-
     last_record_id = await database.execute(query)
 
     logger.info(
@@ -115,8 +127,10 @@ async def create_comment(comment: CommentIn):
         comment.post_id,
     )
 
-    # Return the comment together with its generated primary key.
-    return {**data, "id": last_record_id}
+    return {
+        **data,
+        "id": last_record_id,
+    }
 
 
 @router.get(
@@ -124,13 +138,10 @@ async def create_comment(comment: CommentIn):
     response_model=list[Comment],
 )
 async def get_comments_on_post(post_id: int):
-    """Return all comments associated with a specific post."""
-
+    """Return all comments associated with a post."""
     logger.debug("Fetching comments: post_id=%s", post_id)
 
-    # Restrict the result to comments whose foreign key matches the post ID.
     query = comment_table.select().where(comment_table.c.post_id == post_id)
-    logger.debug("Executing comments query: %s", query)
 
     comments = await database.fetch_all(query)
 
@@ -148,8 +159,7 @@ async def get_comments_on_post(post_id: int):
     response_model=UserPostWithComments,
 )
 async def get_post_with_comments(post_id: int):
-    """Return a post together with all of its comments."""
-
+    """Return a post together with its comments."""
     logger.debug(
         "Fetching post with comments: post_id=%s",
         post_id,
@@ -159,19 +169,12 @@ async def get_post_with_comments(post_id: int):
 
     if post is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found",
         )
 
     comments = await get_comments_on_post(post_id)
 
-    logger.debug(
-        "Post with comments retrieved: post_id=%s, comment_count=%s",
-        post_id,
-        len(comments),
-    )
-
-    # Build the nested structure expected by UserPostWithComments.
     return {
         "post": post,
         "comments": comments,

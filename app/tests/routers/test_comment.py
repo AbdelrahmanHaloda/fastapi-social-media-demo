@@ -1,59 +1,82 @@
+"""Tests for comment creation and retrieval endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
-# async def create_comment(body: str, post_id: int, async_client: AsyncClient) -> dict:
-#     response = await async_client.post(f"/post/{post_id}/comment", json={"body": body})
-#     return response.json()  
 
-""" Test comment creation """
 @pytest.mark.anyio
-async def test_create_comment(async_client: AsyncClient, created_post: dict):
-    
-    json = {"body": "test comment", "post_id": created_post["id"]}
-    response = await async_client.post("/comment", json=json)
-    
-    data =response.json()
-    
+async def test_create_comment(
+    async_client: AsyncClient,
+    created_post: dict,
+    logged_in_token: str,
+):
+    """Test creating an authenticated comment."""
+
+    payload = {
+        "body": "Test comment",
+        "post_id": created_post["id"],
+    }
+
+    response = await async_client.post(
+        "/comment",
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {logged_in_token}",
+        },
+    )
+
+    data = response.json()
+
     assert response.status_code == 201
-    assert data["body"] == response.json()["body"]
-    assert data["post_id"] == response.json()["post_id"]
-    assert response.json()["id"] == 1
-    # assert response.json() == {
-    # "id": 1,
-    # "body": response.json()["body"],
-    # "post_id": response.json()["post_id"]
-    # }
-    #-------------------------------------------
-    # assert {
-    #     "id": 1,
-    #     "body": "test comment",
-    #     "post_id": created_post["id"]
-    # }.items() <= response.json().items()
+    assert data["body"] == payload["body"]
+    assert data["post_id"] == payload["post_id"]
+    assert isinstance(data["id"], int)
 
-"""Test create comment with non-existent post"""
+
 @pytest.mark.anyio
-async def test_create_comment_with_nonexistent_post(async_client: AsyncClient):
-    body = "Test comment"
-    post_id = 1  # Non-existent post ID
-    response = await async_client.post("/comment", json={"body": body, "post_id": post_id})
+async def test_create_comment_with_nonexistent_post(
+    async_client: AsyncClient,
+    logged_in_token: str,
+):
+    """Test creating a comment for a post that does not exist."""
+
+    response = await async_client.post(
+        "/comment",
+        json={
+            "body": "Test comment",
+            "post_id": 999_999,
+        },
+        headers={
+            "Authorization": f"Bearer {logged_in_token}",
+        },
+    )
+
     assert response.status_code == 404
     assert response.json() == {"detail": "Post not found"}
 
 
-"""Test get comments for a specific post"""
 @pytest.mark.anyio
-async def test_get_comments_on_post(async_client: AsyncClient, created_post: dict, created_comment: dict):
-    post_id = created_post["id"]
-    response = await async_client.get(f"/comment/{post_id}/comment")
+async def test_get_comments_on_post(
+    async_client: AsyncClient,
+    created_post: dict,
+    created_comment: dict,
+):
+    """Test retrieving the comments associated with a post."""
+
+    response = await async_client.get(f"/comment/{created_post['id']}/comment")
+
     assert response.status_code == 200
     assert response.json() == [created_comment]
 
 
-"""Test get comments for a post with no comments"""
 @pytest.mark.anyio
 async def test_get_comments_on_empty_post(
-    async_client: AsyncClient, created_post: dict):
-    post_id = created_post["id"]
-    response = await async_client.get(f"/comment/{post_id}/comment")
+    async_client: AsyncClient,
+    created_post: dict,
+):
+    """Test retrieving comments from a post with no comments."""
+
+    response = await async_client.get(f"/comment/{created_post['id']}/comment")
+
     assert response.status_code == 200
     assert response.json() == []
