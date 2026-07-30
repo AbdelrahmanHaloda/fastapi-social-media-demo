@@ -1,4 +1,4 @@
-"""Database schema and connection configuration."""
+"""Database table definitions and connection configuration."""
 
 import databases
 import sqlalchemy
@@ -8,101 +8,109 @@ from app.config import config
 # Registry containing all SQLAlchemy table definitions.
 metadata = sqlalchemy.MetaData()
 
-""" DataBase Users Schema """
+
+# Users table
 user_table = sqlalchemy.Table(
-    "userss",
+    "users",
     metadata,
-    # id column - auto incremented
     sqlalchemy.Column(
         "id",
         sqlalchemy.Integer,
         primary_key=True,
     ),
-    # email column, must be unique.
     sqlalchemy.Column(
         "email",
         sqlalchemy.String,
-        unique=True
+        unique=True,
+        nullable=False,
     ),
-    # password column.
     sqlalchemy.Column(
         "password",
-        sqlalchemy.String
+        sqlalchemy.String,
+        nullable=False,
     ),
 )
 
-""" DataBase Posts Schema """
+
+# Posts table
 post_table = sqlalchemy.Table(
     "posts",
     metadata,
-    # id column - auto incremented
     sqlalchemy.Column(
         "id",
         sqlalchemy.Integer,
         primary_key=True,
     ),
-    # body column, post must contain a body; NULL values are rejected by the database.
     sqlalchemy.Column(
         "body",
         sqlalchemy.String,
+        nullable=False,
+    ),
+    # Identifies the user who created the post.
+    sqlalchemy.Column(
+        "user_id",
+        sqlalchemy.ForeignKey("users.id"),
         nullable=False,
     ),
 )
 
-""" DataBase Comments Schema """
+
+# Comments table
 comment_table = sqlalchemy.Table(
     "comments",
     metadata,
-    # id column - auto incremented
     sqlalchemy.Column(
         "id",
         sqlalchemy.Integer,
         primary_key=True,
     ),
-    # body column, comment must contain a body; NULL values are rejected by the database.
     sqlalchemy.Column(
         "body",
         sqlalchemy.String,
         nullable=False,
     ),
-    # post_id column, enforces the parent-child relationship between comments and posts.
+    # Identifies the post that contains the comment.
     sqlalchemy.Column(
         "post_id",
         sqlalchemy.ForeignKey("posts.id"),
         nullable=False,
     ),
+    # Identifies the user who created the comment.
+    sqlalchemy.Column(
+        "user_id",
+        sqlalchemy.ForeignKey("users.id"),
+        nullable=False,
+    ),
 )
 
 
-# check_same_thread is a SQLite-specific connection option.
-#
 # SQLite normally restricts a connection to the thread that created it.
-# Disabling this check allows the connection to be used safely by the
-# application's database infrastructure across different threads.
+# Disable that restriction because the application may use the connection
+# from different threads.
 connect_args = {}
 
 if config.DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
 
 
-# Synchronous SQLAlchemy engine used for schema creation.
+# Synchronous engine used to create the database schema.
 engine = sqlalchemy.create_engine(
     config.DATABASE_URL,
     connect_args=connect_args,
 )
 
 
-# Create any tables that do not already exist.
+# Create tables that do not already exist.
 #
-# Important: create_all() does not modify an existing table when its schema
-# changes. A migration tool such as Alembic should eventually be used for that.
+# create_all() does not update existing tables after their definitions change.
+# Schema migrations should eventually be handled using a tool such as Alembic.
 metadata.create_all(engine)
 
 
-# Asynchronous database connection used by the FastAPI endpoints.
+# Asynchronous connection used by the FastAPI endpoints.
 #
-# During tests, force_rollback=True ensures that database changes are rolled
-# back instead of being permanently committed.
+# During tests, force_rollback prevents test changes from being permanently
+# committed to the database.
 database = databases.Database(
     config.DATABASE_URL,
     force_rollback=config.DB_FORCE_ROLL_BACK,

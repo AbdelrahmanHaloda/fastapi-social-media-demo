@@ -56,8 +56,10 @@ async def create_post(
 
 
     # Convert the validated request model into values accepted by SQLAlchemy.
-    data = post.model_dump()
-
+    data = {
+        **post.model_dump(),
+        "user_id": current_user.id,
+    }
     query = post_table.insert().values(data)
     # For the current SQLite database, execute returns the generated
     # primary-key value of the inserted row.
@@ -105,9 +107,11 @@ async def create_comment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found",
         )
-
-    data = comment.model_dump()
-
+    # Convert the validated request model into values accepted by SQLAlchemy.
+    data = {
+        **comment.model_dump(),
+        "user_id": current_user.id,
+    }
     query = comment_table.insert().values(data)
     last_record_id = await database.execute(query)
 

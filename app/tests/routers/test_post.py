@@ -10,6 +10,7 @@ from app import security
 @pytest.mark.anyio
 async def test_create_post(
     async_client: AsyncClient,
+    registered_user: dict,
     logged_in_token: str,
 ):
     """Test creating a post with a valid access token."""
@@ -28,8 +29,8 @@ async def test_create_post(
 
     assert response.status_code == status.HTTP_201_CREATED
     assert data["body"] == payload["body"]
+    assert data["user_id"] == registered_user["id"]
     assert isinstance(data["id"], int)
-
 
 @pytest.mark.anyio
 async def test_create_post_with_no_body(
