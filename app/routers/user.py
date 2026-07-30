@@ -20,7 +20,7 @@ async def register(user: UserIn):
     if await get_user(user.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=" A user with that email already exist !",
+            detail=" A user with that email already exists !",
         )
 
     # TODO: Hash the password before storing it in the database.
