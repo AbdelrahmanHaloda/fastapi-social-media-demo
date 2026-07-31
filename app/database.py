@@ -13,6 +13,7 @@ metadata = sqlalchemy.MetaData()
 user_table = sqlalchemy.Table(
     "users",
     metadata,
+    # unique id for each user
     sqlalchemy.Column(
         "id",
         sqlalchemy.Integer,
@@ -36,6 +37,7 @@ user_table = sqlalchemy.Table(
 post_table = sqlalchemy.Table(
     "posts",
     metadata,
+    # unique id for each post
     sqlalchemy.Column(
         "id",
         sqlalchemy.Integer,
@@ -59,6 +61,7 @@ post_table = sqlalchemy.Table(
 comment_table = sqlalchemy.Table(
     "comments",
     metadata,
+    # unique id for each comment
     sqlalchemy.Column(
         "id",
         sqlalchemy.Integer,
@@ -83,6 +86,36 @@ comment_table = sqlalchemy.Table(
     ),
 )
 
+# like_table table
+like_table = sqlalchemy.Table(
+    "likes",
+    metadata,
+    # unique id for each like
+    sqlalchemy.Column(
+        "id",
+        sqlalchemy.Integer,
+        primary_key=True,
+    ),
+    # Identifies the liked post.
+    sqlalchemy.Column(
+        "post_id",
+        sqlalchemy.ForeignKey("posts.id"),
+        nullable=False,
+    ),
+    # Identifies the user who liked the post.
+    sqlalchemy.Column(
+        "user_id",
+        sqlalchemy.ForeignKey("users.id"),
+        nullable=False,
+    ),
+)
+
+# A user may like a particular post only once.
+sqlalchemy.UniqueConstraint(
+    "post_id",
+    "user_id",
+    name="uq_likes_post_user",
+),
 
 # SQLite normally restricts a connection to the thread that created it.
 # Disable that restriction because the application may use the connection
