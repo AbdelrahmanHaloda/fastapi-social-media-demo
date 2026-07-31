@@ -32,10 +32,10 @@ async def test_create_post(
     assert response.status_code == status.HTTP_201_CREATED
     assert data["body"] == payload["body"]
 
-    # The post owner must come from the authenticated user's token.
+    # The post must belong to the authenticated user.
     assert data["user_id"] == registered_user["id"]
 
-    # The database should generate an integer ID.
+    # The database must generate the post ID.
     assert isinstance(data["id"], int)
 
 
@@ -54,7 +54,7 @@ async def test_create_post_with_no_body(
         },
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
@@ -64,7 +64,7 @@ async def test_like_post(
     registered_user: dict,
     logged_in_token: str,
 ):
-    """Test liking a post as an authenticated user."""
+    """Test liking a post and updating its total number of likes."""
 
     response = await async_client.post(
         "/like",
@@ -83,7 +83,17 @@ async def test_like_post(
 
     # The like must belong to the authenticated user.
     assert data["user_id"] == registered_user["id"]
+
+    # The database must generate the like ID.
     assert isinstance(data["id"], int)
+
+    # Retrieve the post to verify the aggregated like count.
+    post_response = await async_client.get(f"/post/{created_post['id']}")
+
+    post_data = post_response.json()
+
+    assert post_response.status_code == status.HTTP_200_OK
+    assert post_data["post"]["likes"] == 1
 
 
 @pytest.mark.anyio
@@ -91,12 +101,17 @@ async def test_get_all_posts(
     async_client: AsyncClient,
     created_post: dict,
 ):
-    """Test retrieving all existing posts."""
+    """Test retrieving all posts with their like counts."""
 
     response = await async_client.get("/posts")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == [created_post]
+    assert response.json() == [
+        {
+            **created_post,
+            "likes": 0,
+        }
+    ]
 
 
 @pytest.mark.anyio
@@ -105,14 +120,17 @@ async def test_get_post_with_comments(
     created_post: dict,
     created_comment: dict,
 ):
-    """Test retrieving a post together with its comments."""
+    """Test retrieving a post with its like count and comments."""
 
     response = await async_client.get(f"/post/{created_post['id']}")
 
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
-    assert data["post"] == created_post
+    assert data["post"] == {
+        **created_post,
+        "likes": 0,
+    }
     assert data["comments"] == [created_comment]
 
 
@@ -124,7 +142,7 @@ async def test_create_post_expired_token(
 ):
     """Test that an expired access token is rejected."""
 
-    # Force newly created tokens to be expired immediately.
+    # Force newly generated access tokens to expire immediately.
     mocker.patch(
         "app.security.access_token_expire_minutes",
         return_value=-1,

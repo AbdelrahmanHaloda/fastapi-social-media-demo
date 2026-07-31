@@ -18,6 +18,12 @@ class UserPost(UserPostIn):
     user_id: int
 
 
+class UserPostWithLikes(UserPost):
+    """Post data including its total number of likes."""
+
+    likes: int
+
+
 class CommentIn(BaseModel):
     """Data required to create a comment."""
 
@@ -35,7 +41,7 @@ class Comment(CommentIn):
 
 
 class UserPostWithComments(BaseModel):
-    """A post together with all of its comments."""
+    """A post together with all its comments."""
 
-    post: UserPost
+    post: UserPostWithLikes
     comments: list[Comment]
