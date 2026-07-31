@@ -1,10 +1,11 @@
-"""Tests for post creation, retrieval, authentication, and likes."""
+"""Tests for post creation, retrieval, authentication, likes, and sorting."""
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
 
 from app import security
+from app.tests.routers.conftest import create_post, like_post
 
 
 @pytest.mark.anyio
@@ -31,10 +32,8 @@ async def test_create_post(
 
     assert response.status_code == status.HTTP_201_CREATED
     assert data["body"] == payload["body"]
-
     # The post must belong to the authenticated user.
     assert data["user_id"] == registered_user["id"]
-
     # The database must generate the post ID.
     assert isinstance(data["id"], int)
 
@@ -80,14 +79,9 @@ async def test_like_post(
 
     assert response.status_code == status.HTTP_201_CREATED
     assert data["post_id"] == created_post["id"]
-
-    # The like must belong to the authenticated user.
     assert data["user_id"] == registered_user["id"]
-
-    # The database must generate the like ID.
     assert isinstance(data["id"], int)
 
-    # Retrieve the post to verify the aggregated like count.
     post_response = await async_client.get(f"/post/{created_post['id']}")
 
     post_data = post_response.json()
@@ -112,6 +106,101 @@ async def test_get_all_posts(
             "likes": 0,
         }
     ]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "sorting, expected_indices",
+    [
+        ("new", [1, 0]),
+        ("old", [0, 1]),
+    ],
+)
+async def test_get_all_posts_sorting(
+    async_client: AsyncClient,
+    logged_in_token: str,
+    sorting: str,
+    expected_indices: list[int],
+):
+    """Test sorting posts from newest or oldest."""
+
+    first_post = await create_post(
+        "Test post 1",
+        async_client,
+        logged_in_token,
+    )
+    second_post = await create_post(
+        "Test post 2",
+        async_client,
+        logged_in_token,
+    )
+
+    response = await async_client.get(
+        "/posts",
+        params={"sorting": sorting},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    post_ids = [post["id"] for post in response.json()]
+    created_posts = [first_post, second_post]
+
+    expected_order = [created_posts[index]["id"] for index in expected_indices]
+
+    assert post_ids == expected_order
+
+
+@pytest.mark.anyio
+async def test_get_all_posts_sort_likes(
+    async_client: AsyncClient,
+    logged_in_token: str,
+):
+    """Test sorting posts by their number of likes."""
+
+    first_post = await create_post(
+        "Test post 1",
+        async_client,
+        logged_in_token,
+    )
+    second_post = await create_post(
+        "Test post 2",
+        async_client,
+        logged_in_token,
+    )
+
+    await like_post(
+        first_post["id"],
+        async_client,
+        logged_in_token,
+    )
+
+    response = await async_client.get(
+        "/posts",
+        params={"sorting": "most_likes"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    post_ids = [post["id"] for post in response.json()]
+
+    assert post_ids == [
+        first_post["id"],
+        second_post["id"],
+    ]
+
+
+@pytest.mark.anyio
+async def test_get_all_posts_wrong_sorting(
+    async_client: AsyncClient,
+):
+    """Test that an unsupported sorting value fails validation."""
+
+    response = await async_client.get(
+        "/posts",
+        params={"sorting": "wrong"},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.mark.anyio
@@ -142,7 +231,6 @@ async def test_create_post_expired_token(
 ):
     """Test that an expired access token is rejected."""
 
-    # Force newly generated access tokens to expire immediately.
     mocker.patch(
         "app.security.access_token_expire_minutes",
         return_value=-1,

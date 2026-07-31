@@ -1,6 +1,7 @@
 """API routes for creating and retrieving posts and comments."""
 
 import logging
+from enum import Enum
 from typing import Annotated
 
 import sqlalchemy
@@ -103,17 +104,28 @@ async def create_post(
         "id": last_record_id,
     }
 
+class PostSorting(str, Enum):
+    NEW = "new"
+    OLD = "old"
+    MOST_LIKES = "most_likes"
 
 @router.get(
     "/posts",
     response_model=list[UserPostWithLikes],
 )
-async def get_posts():
+async def get_posts(sorting: PostSorting = PostSorting.NEW ):
     """Return all posts together with their like counts."""
 
     logger.debug("Fetching all posts with like counts")
 
-    posts = await database.fetch_all(select_posts_likes)
+    if sorting == PostSorting.NEW:
+        query = select_posts_likes.order_by(post_table.c.id.desc())
+    elif sorting == PostSorting.OLD:
+        query = select_posts_likes.order_by(post_table.c.id.asc())
+    elif sorting == PostSorting.MOST_LIKES:
+        query = select_posts_likes.order_by(sqlalchemy.desc("likes"))
+    
+    posts = await database.fetch_all(query)
 
     logger.debug(
         "Posts retrieved: count=%s",
