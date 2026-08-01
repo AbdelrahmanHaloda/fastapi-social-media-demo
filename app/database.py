@@ -30,6 +30,11 @@ user_table = sqlalchemy.Table(
         sqlalchemy.String,
         nullable=False,
     ),
+    sqlalchemy.Column(
+        "confirmed",
+        sqlalchemy.Boolean,
+        server_default=sqlalchemy.false(),
+        nullable=False,),
 )
 
 
@@ -109,13 +114,6 @@ like_table = sqlalchemy.Table(
         nullable=False,
     ),
 )
-
-# A user may like a particular post only once.
-sqlalchemy.UniqueConstraint(
-    "post_id",
-    "user_id",
-    name="uq_likes_post_user",
-),
 
 # SQLite normally restricts a connection to the thread that created it.
 # Disable that restriction because the application may use the connection
