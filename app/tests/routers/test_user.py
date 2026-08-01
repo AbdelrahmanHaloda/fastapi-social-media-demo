@@ -57,7 +57,7 @@ async def test_login_user_not_exists(async_client: AsyncClient):
     )
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert "Could not validate credentials" in response.json()["detail"]
+    assert "Invalid email or password" in response.json()["detail"]
 
 @pytest.mark.anyio
 async def test_login_user(
@@ -93,4 +93,4 @@ async def test_login_user_wrong_password(
     )
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert "Could not validate credentials" in response.json()["detail"]
+    assert "Invalid email or password" in response.json()["detail"]
