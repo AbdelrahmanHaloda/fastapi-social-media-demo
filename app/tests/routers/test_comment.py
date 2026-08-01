@@ -8,7 +8,7 @@ from httpx import AsyncClient
 async def test_create_comment(
     async_client: AsyncClient,
     created_post: dict,
-    registered_user: dict,
+    confirmed_user: dict,
     logged_in_token: str,
 ):
     """Test creating an authenticated comment."""
@@ -31,7 +31,7 @@ async def test_create_comment(
     assert response.status_code == 201
     assert data["body"] == payload["body"]
     assert data["post_id"] == payload["post_id"]
-    assert data["user_id"] == registered_user["id"]
+    assert data["user_id"] == confirmed_user["id"]
     assert isinstance(data["id"], int)
 
 

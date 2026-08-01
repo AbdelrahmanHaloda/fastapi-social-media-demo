@@ -11,7 +11,7 @@ from app.tests.routers.conftest import create_post, like_post
 @pytest.mark.anyio
 async def test_create_post(
     async_client: AsyncClient,
-    registered_user: dict,
+    confirmed_user: dict,
     logged_in_token: str,
 ):
     """Test creating a post as an authenticated user."""
@@ -33,7 +33,7 @@ async def test_create_post(
     assert response.status_code == status.HTTP_201_CREATED
     assert data["body"] == payload["body"]
     # The post must belong to the authenticated user.
-    assert data["user_id"] == registered_user["id"]
+    assert data["user_id"] == confirmed_user["id"]
     # The database must generate the post ID.
     assert isinstance(data["id"], int)
 
@@ -226,7 +226,7 @@ async def test_get_post_with_comments(
 @pytest.mark.anyio
 async def test_create_post_expired_token(
     async_client: AsyncClient,
-    registered_user: dict,
+    confirmed_user: dict,
     mocker,
 ):
     """Test that an expired access token is rejected."""
@@ -236,7 +236,7 @@ async def test_create_post_expired_token(
         return_value=-1,
     )
 
-    expired_token = security.create_access_token(registered_user["email"])
+    expired_token = security.create_access_token(confirmed_user["email"])
 
     response = await async_client.post(
         "/post",

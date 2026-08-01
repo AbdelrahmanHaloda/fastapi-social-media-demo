@@ -84,9 +84,6 @@ async def test_confirm_user_expired_token(async_client: AsyncClient, mocker):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert "Token has expired" in response.json()["detail"]
 
-
-
-
 @pytest.mark.anyio
 async def test_login_user_not_exists(async_client: AsyncClient):
     response = await async_client.post(
@@ -101,15 +98,34 @@ async def test_login_user_not_exists(async_client: AsyncClient):
     assert "Invalid email or password" in response.json()["detail"]
 
 @pytest.mark.anyio
-async def test_login_user(
+async def test_login_user_not_confirmed(
     async_client: AsyncClient,
     registered_user: dict,
 ):
+    """Test logging in a user whose email is not confirmed."""
+
     response = await async_client.post(
         "/token",
         json={
             "email": registered_user["email"],
             "password": registered_user["password"],
+        },
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json()["detail"] == "User email is not confirmed"
+
+
+@pytest.mark.anyio
+async def test_login_user(
+    async_client: AsyncClient,
+    confirmed_user: dict,
+):
+    response = await async_client.post(
+        "/token",
+        json={
+            "email": confirmed_user["email"],
+            "password": confirmed_user["password"],
         },
     )
 

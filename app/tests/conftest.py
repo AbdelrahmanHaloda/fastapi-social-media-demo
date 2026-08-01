@@ -70,19 +70,29 @@ async def registered_user(
         "id": user.id,
     }
 
+@pytest.fixture()
+async def confirmed_user(registered_user: dict) -> dict:
+
+    query = (
+        user_table.update()
+        .where(user_table.c.email == registered_user["email"])
+        .values(confirmed=True)
+    )
+    await database.execute(query)
+    return registered_user
 
 @pytest.fixture()
 async def logged_in_token(
     async_client: AsyncClient,
-    registered_user: dict[str, str | int],
+    confirmed_user: dict[str, str | int],
 ) -> str:
-    """Log in the registered test user and return its access token."""
+    """Log in the confirmed test user and return its access token."""
 
     response = await async_client.post(
         "/token",
         json={
-            "email": registered_user["email"],
-            "password": registered_user["password"],
+            "email": confirmed_user["email"],
+            "password": confirmed_user["password"],
         },
     )
     response.raise_for_status()
