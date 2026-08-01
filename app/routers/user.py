@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 
 from app import tasks
 from app.database import database, user_table
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(user: UserIn, request: Request) -> dict[str, str]:
+async def register(user: UserIn, background_tasks: BackgroundTasks, request: Request) -> dict[str, str]:
     """Register a new user if the email is not already in use."""
 
     if await get_user(user.email):
@@ -35,10 +35,11 @@ async def register(user: UserIn, request: Request) -> dict[str, str]:
         password=get_password_hash(user.password),
     )
     await database.execute(query)
-    await tasks.send_user_registeration_email(
+    background_tasks.add_task(
+        tasks.send_user_registeration_email,
         user.email,
-        confirmation_url = request.url_for("confirm_email", token=create_confirmation_token(user.email)))
-
+        confirmation_url=request.url_for("confirm_email", token=create_confirmation_token(user.email))
+    )
     return {"detail": "User created. Please confirm your email"}
 
 
