@@ -2,9 +2,11 @@
 
 import os
 from collections.abc import AsyncGenerator
+from unittest.mock import AsyncMock, Mock
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from fastapi import status
+from httpx import ASGITransport, AsyncClient, Request, Response
 
 # Select the test configuration before importing application modules.
 os.environ["ENV_STATE"] = "test"
@@ -98,3 +100,14 @@ async def logged_in_token(
     response.raise_for_status()
 
     return response.json()["access_token"]
+
+@pytest.fixture(autouse = True)
+def mock_httpx_client(mocker):
+    """Mock the httpx.AsyncClient to prevent real HTTP requests during tests."""
+    mocked_client = mocker.patch("app.tasks.httpx.AsyncClient")
+    mocked_async_client = Mock()
+    response = Response(status_code = status.HTTP_200_OK, content = "", request = Request("POST", "//"))
+    mocked_async_client.post = AsyncMock(return_value = response)
+    mocked_client.return_value.__aenter__.return_value = mocked_async_client
+
+    return mocked_async_client

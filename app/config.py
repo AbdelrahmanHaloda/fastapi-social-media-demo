@@ -35,9 +35,13 @@ class GlobalConfig(BaseSettings):
     # Disabled by default unless an environment overrides it.
     DB_FORCE_ROLL_BACK: bool = False
 
-    # Optaion Cloud Logging 
+    # longtail - Cloud Logging 
     LOGTAIL_API_KEY: str | None = None
     LOGTAIL_INGESTING_HOST: str | None = None
+
+    # MAILGUN - email service
+    MAILGUN_API_KEY: str | None = None
+    MAILGUN_DOMAIN: str | None = None
 
 class DevConfig(GlobalConfig):
     """Development environment configuration."""
