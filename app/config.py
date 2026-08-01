@@ -43,6 +43,11 @@ class GlobalConfig(BaseSettings):
     MAILGUN_API_KEY: str | None = None
     MAILGUN_DOMAIN: str | None = None
 
+    # Backblaze B2 file storage
+    B2_KEY_ID: str | None = None
+    B2_APPLICATION_KEY: str | None = None
+    B2_BUCKET_NAME: str | None = None
+
 class DevConfig(GlobalConfig):
     """Development environment configuration."""
 
