@@ -48,7 +48,7 @@ def aiofiles_mock_open(mocker, fs):
 
         # Open the actual pyfakefs file and delegate asynchronous operations
         # to its synchronous read and write methods.
-        with open(fname, mode) as file_handle:
+        with open(fname, mode) as file_handle:  # noqa: ASYNC230
             async_file_mock.read.side_effect = file_handle.read
             async_file_mock.write.side_effect = file_handle.write
 
