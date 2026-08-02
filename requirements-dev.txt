@@ -1,7 +1,7 @@
-ruff
+
+ruff==0.16.1
 black
 isort
-pytest
-httpx
-pytest-mock
-pyfakefs
+pytest==9.1.1
+pytest-mock==3.15.1
+pyfakefs==6.2.0
