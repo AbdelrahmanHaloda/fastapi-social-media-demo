@@ -3,6 +3,8 @@
 import logging
 from contextlib import asynccontextmanager
 
+# this shall be user with sentry
+import sentry_sdk  # noqa: F401
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exception_handlers import http_exception_handler
