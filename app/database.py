@@ -59,6 +59,12 @@ post_table = sqlalchemy.Table(
         sqlalchemy.ForeignKey("users.id"),
         nullable=False,
     ),
+    # Image post.
+    sqlalchemy.Column(
+        "image_url",
+        sqlalchemy.String,
+        nullable=True,
+    ),
 )
 
 

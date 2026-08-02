@@ -47,6 +47,9 @@ class GlobalConfig(BaseSettings):
     B2_KEY_ID: str | None = None
     B2_APPLICATION_KEY: str | None = None
     B2_BUCKET_NAME: str | None = None
+    
+    # DEEPAI - AI image generation
+    DEEPAI_API_KEY: str | None = None
 
 class DevConfig(GlobalConfig):
     """Development environment configuration."""

@@ -5,7 +5,7 @@ from fastapi import status
 from httpx import AsyncClient
 
 from app import security
-from app.tests.routers.conftest import create_post, like_post
+from app.tests.helpers import create_post, like_post
 
 
 @pytest.mark.anyio
@@ -34,6 +34,8 @@ async def test_create_post(
     assert data["body"] == payload["body"]
     # The post must belong to the authenticated user.
     assert data["user_id"] == confirmed_user["id"]
+    # The post must have image_url
+    assert data["image_url"] is None
     # The database must generate the post ID.
     assert isinstance(data["id"], int)
 

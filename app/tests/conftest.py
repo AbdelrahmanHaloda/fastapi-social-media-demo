@@ -8,6 +8,8 @@ import pytest
 from fastapi import status
 from httpx import ASGITransport, AsyncClient, Request, Response
 
+from app.tests.helpers import create_post
+
 # Select the test configuration before importing application modules.
 os.environ["ENV_STATE"] = "test"
 
@@ -29,7 +31,7 @@ async def db() -> AsyncGenerator[None, None]:
     await database.connect()
 
     try:
-        yield
+        yield database
     finally:
         await database.disconnect()
 
@@ -111,3 +113,16 @@ def mock_httpx_client(mocker):
     mocked_client.return_value.__aenter__.return_value = mocked_async_client
 
     return mocked_async_client
+
+@pytest.fixture()
+async def created_post(
+    async_client: AsyncClient,
+    logged_in_token: str,
+) -> dict:
+    """Provide a newly created post to tests that require one."""
+
+    return await create_post(
+        body="Test post",
+        async_client=async_client,
+        logged_in_token=logged_in_token,
+    )
