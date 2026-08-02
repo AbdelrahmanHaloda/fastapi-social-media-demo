@@ -65,9 +65,8 @@ async def call_upload_endpoint(
     sample_image: pathlib.Path,
 ):
     """Upload the sample image using an authenticated API request."""
-
     # Keep the image open until httpx has finished creating the request.
-    with open(sample_image, "rb") as image_file:
+    with open(sample_image, "rb") as image_file:  # noqa: ASYNC230
         return await async_client.post(
             "/upload",
             files={"file": image_file},

@@ -8,7 +8,7 @@ from app.config import config
 logger = logging.getLogger(__name__)
 
 
-@lru_cache()
+@lru_cache
 def b2_api() -> b2.B2Api:
     """Create and authorize a cached B2 API client."""
 
@@ -26,7 +26,7 @@ def b2_api() -> b2.B2Api:
     return api
 
 
-@lru_cache()
+@lru_cache
 def b2_get_bucket(api: b2.B2Api) -> b2.Bucket:
     """Return the configured B2 bucket."""
 
