@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 class APIResponseError(Exception):
     """Custom exception for API response errors."""
 
-    pass
-
 
 async def send_simple_email(
     to: str,
