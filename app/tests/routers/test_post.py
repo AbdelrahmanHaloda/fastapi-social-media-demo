@@ -32,12 +32,49 @@ async def test_create_post(
 
     assert response.status_code == status.HTTP_201_CREATED
     assert data["body"] == payload["body"]
+
     # The post must belong to the authenticated user.
     assert data["user_id"] == confirmed_user["id"]
-    # The post must have image_url
+
+    # No image is generated when no prompt is provided.
     assert data["image_url"] is None
+
     # The database must generate the post ID.
     assert isinstance(data["id"], int)
+
+
+@pytest.mark.anyio
+async def test_create_post_with_prompt(
+    async_client: AsyncClient,
+    logged_in_token: str,
+    mock_generate_cute_creature_api,
+):
+    """Test creating a post with an image-generation prompt."""
+
+    body = "Test body"
+    prompt = "A cat"
+
+    response = await async_client.post(
+        "/post",
+        params={
+            "prompt": prompt,
+        },
+        json={
+            "body": body,
+        },
+        headers={
+            "Authorization": f"Bearer {logged_in_token}",
+        },
+    )
+
+    data = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert data["body"] == body
+    assert data["image_url"] is None
+    assert isinstance(data["id"], int)
+
+    mock_generate_cute_creature_api.assert_awaited_once_with(prompt)
 
 
 @pytest.mark.anyio
@@ -131,6 +168,7 @@ async def test_get_all_posts_sorting(
         async_client,
         logged_in_token,
     )
+
     second_post = await create_post(
         "Test post 2",
         async_client,
@@ -139,13 +177,19 @@ async def test_get_all_posts_sorting(
 
     response = await async_client.get(
         "/posts",
-        params={"sorting": sorting},
+        params={
+            "sorting": sorting,
+        },
     )
 
     assert response.status_code == status.HTTP_200_OK
 
     post_ids = [post["id"] for post in response.json()]
-    created_posts = [first_post, second_post]
+
+    created_posts = [
+        first_post,
+        second_post,
+    ]
 
     expected_order = [created_posts[index]["id"] for index in expected_indices]
 
@@ -164,6 +208,7 @@ async def test_get_all_posts_sort_likes(
         async_client,
         logged_in_token,
     )
+
     second_post = await create_post(
         "Test post 2",
         async_client,
@@ -178,7 +223,9 @@ async def test_get_all_posts_sort_likes(
 
     response = await async_client.get(
         "/posts",
-        params={"sorting": "most_likes"},
+        params={
+            "sorting": "most_likes",
+        },
     )
 
     assert response.status_code == status.HTTP_200_OK
@@ -199,7 +246,9 @@ async def test_get_all_posts_wrong_sorting(
 
     response = await async_client.get(
         "/posts",
-        params={"sorting": "wrong"},
+        params={
+            "sorting": "wrong",
+        },
     )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -218,11 +267,15 @@ async def test_get_post_with_comments(
     data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
+
     assert data["post"] == {
         **created_post,
         "likes": 0,
     }
-    assert data["comments"] == [created_comment]
+
+    assert data["comments"] == [
+        created_comment,
+    ]
 
 
 @pytest.mark.anyio

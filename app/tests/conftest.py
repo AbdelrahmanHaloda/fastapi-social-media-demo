@@ -8,13 +8,12 @@ import pytest
 from fastapi import status
 from httpx import ASGITransport, AsyncClient, Request, Response
 
-from app.tests.helpers import create_post
-
 # Select the test configuration before importing application modules.
 os.environ["ENV_STATE"] = "test"
 
 from app.database import database, user_table
 from app.main import app
+from app.tests.helpers import create_post
 
 
 @pytest.fixture(scope="session")
@@ -25,7 +24,7 @@ def anyio_backend() -> str:
 
 
 @pytest.fixture(autouse=True)
-async def db() -> AsyncGenerator[None, None]:
+async def db() -> AsyncGenerator:
     """Connect to the test database for each test and disconnect afterward."""
 
     await database.connect()
@@ -37,7 +36,7 @@ async def db() -> AsyncGenerator[None, None]:
 
 
 @pytest.fixture()
-async def async_client() -> AsyncGenerator[AsyncClient, None]:
+async def async_client() -> AsyncGenerator:
     """Provide an asynchronous HTTP client for testing the FastAPI app."""
 
     async with AsyncClient(
@@ -74,16 +73,21 @@ async def registered_user(
         "id": user.id,
     }
 
+
 @pytest.fixture()
 async def confirmed_user(registered_user: dict) -> dict:
+    """Create and return a confirmed test user."""
 
     query = (
         user_table.update()
         .where(user_table.c.email == registered_user["email"])
         .values(confirmed=True)
     )
+
     await database.execute(query)
+
     return registered_user
+
 
 @pytest.fixture()
 async def logged_in_token(
@@ -103,16 +107,6 @@ async def logged_in_token(
 
     return response.json()["access_token"]
 
-@pytest.fixture(autouse = True)
-def mock_httpx_client(mocker):
-    """Mock the httpx.AsyncClient to prevent real HTTP requests during tests."""
-    mocked_client = mocker.patch("app.tasks.httpx.AsyncClient")
-    mocked_async_client = Mock()
-    response = Response(status_code = status.HTTP_200_OK, content = "", request = Request("POST", "//"))
-    mocked_async_client.post = AsyncMock(return_value = response)
-    mocked_client.return_value.__aenter__.return_value = mocked_async_client
-
-    return mocked_async_client
 
 @pytest.fixture()
 async def created_post(
@@ -125,4 +119,36 @@ async def created_post(
         body="Test post",
         async_client=async_client,
         logged_in_token=logged_in_token,
+    )
+
+
+@pytest.fixture(autouse=True)
+def mock_httpx_client(mocker):
+    """Mock httpx.AsyncClient to prevent real HTTP requests during tests."""
+
+    mocked_client = mocker.patch("app.tasks.httpx.AsyncClient")
+    mocked_async_client = Mock()
+
+    response = Response(
+        status_code=status.HTTP_200_OK,
+        content="",
+        request=Request("POST", "//"),
+    )
+
+    mocked_async_client.post = AsyncMock(return_value=response)
+
+    mocked_client.return_value.__aenter__.return_value = mocked_async_client
+
+    return mocked_async_client
+
+
+@pytest.fixture()
+def mock_generate_cute_creature_api(mocker):
+    """Mock image generation for tests that require it."""
+
+    return mocker.patch(
+        "app.tasks._generate_cute_creature_api",
+        return_value={
+            "output_url": "http://example.net/image.jpg",
+        },
     )
