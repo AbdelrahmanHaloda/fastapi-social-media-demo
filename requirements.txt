@@ -27,3 +27,5 @@ python-multipart
 passlib[bcrypt]
 aiofiles
 b2sdk
+psycopg2-binary
+sentry-sdk[fastapi]
